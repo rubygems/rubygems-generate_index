@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../command"
+require "rubygems/command"
 require_relative "../indexer"
 
 ##
@@ -13,6 +13,8 @@ class Gem::Commands::GenerateIndexCommand < Gem::Command
     super "generate_index",
           "Generates the index files for a gem server directory",
           :directory => ".", :build_modern => true
+
+    @deprecated_options = { "generate_index" => {} } unless defined?(@deprecated_options)
 
     add_option "-d", "--directory=DIRNAME",
                "repository base dir containing gems subdir" do |dir, options|
@@ -81,6 +83,43 @@ Marshal::MINOR_VERSION constants.  It is used to ensure compatibility.
       else
         indexer.generate_index
       end
+    end
+  end
+
+  unless allocate.respond_to?(:deprecate_option)
+    def deprecate_option(name, version: nil, extra_msg: nil)
+      @deprecated_options[command].merge!({ name => { "rg_version_to_expire" => version, "extra_msg" => extra_msg } })
+    end
+
+    def check_deprecated_options(options)
+      options.each do |option|
+        next unless option_is_deprecated?(option)
+        deprecation = @deprecated_options[command][option]
+        version_to_expire = deprecation["rg_version_to_expire"]
+
+        deprecate_option_msg = if version_to_expire
+          "The \"#{option}\" option has been deprecated and will be removed in Rubygems #{version_to_expire}."
+        else
+          "The \"#{option}\" option has been deprecated and will be removed in future versions of Rubygems."
+        end
+
+        extra_msg = deprecation["extra_msg"]
+
+        deprecate_option_msg += " #{extra_msg}" if extra_msg
+
+        alert_warning(deprecate_option_msg)
+      end
+    end
+
+    def handle_options(args)
+      super
+      check_deprecated_options(args)
+    end
+
+    private
+
+    def option_is_deprecated?(option)
+      @deprecated_options[command].key?(option)
     end
   end
 end

@@ -33,7 +33,7 @@ class TestGemIndexer < Gem::TestCase
   end
 
   def teardown
-    FileUtils.rm_rf(@indexer.directory)
+    FileUtils.rm_rf(@indexer.directory) if @indexer&.directory
   ensure
     super
   end

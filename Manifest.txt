@@ -1,0 +1,11 @@
+CODE_OF_CONDUCT.md
+Gemfile
+Gemfile.lock
+LICENSE.txt
+MIT.txt
+Manifest.txt
+README.md
+lib/rubygems/commands/generate_index_command.rb
+lib/rubygems/indexer.rb
+lib/rubygems_plugin.rb
+rubygems-generate_index.gemspec
