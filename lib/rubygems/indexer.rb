@@ -1,8 +1,16 @@
 # frozen_string_literal: true
 
-require_relative "../rubygems"
-require_relative "package"
+require "rubygems"
+require "rubygems/package"
 require "tmpdir"
+
+if Gem::VERSION < "3.2.0"
+  begin
+    gem "builder"
+    require "builder/xchar"
+  rescue *rescue_exceptions
+  end
+end
 
 ##
 # Top level class for building the gem repository index.
@@ -47,6 +55,11 @@ class Gem::Indexer
     require "fileutils"
     require "tmpdir"
     require "zlib"
+
+    if Gem::VERSION < "3.2.0" && !defined?(Builder::XChar)
+      raise "Gem::Indexer requires that the XML Builder library be installed:" \
+            "\n\tgem install builder"
+    end
 
     options = { :build_modern => true }.merge options
 
@@ -411,8 +424,7 @@ class Gem::Indexer
   # +dest+.  For a latest index, does not ensure the new file is minimal.
 
   def update_specs_index(index, source, dest)
-    Gem.load_safe_marshal
-    specs_index = Gem::SafeMarshal.safe_load Gem.read_binary(source)
+    specs_index = marshal_load Gem.read_binary(source)
 
     index.each do |spec|
       platform = spec.original_platform
@@ -424,6 +436,17 @@ class Gem::Indexer
 
     File.open dest, "wb" do |io|
       Marshal.dump specs_index, io
+    end
+  end
+
+  private
+
+  def marshal_load(string)
+    if Gem.respond_to?(:load_safe_marshal)
+      Gem.load_safe_marshal
+      Gem::SafeMarshal.safe_load string
+    else
+      Marshal.load string
     end
   end
 end

@@ -2,16 +2,13 @@ name: ubuntu-lint
 
 on:
   pull_request:
-
-  push:
-    branches:
-      - master
+  merge_group:
 
 concurrency:
   group: ci-${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 
-permissions:  # added using https://github.com/step-security/secure-workflows
+permissions: # added using https://github.com/step-security/secure-workflows
   contents: read
 
 jobs:
@@ -26,15 +23,9 @@ jobs:
         uses: ruby/setup-ruby@5cfe23c062c0aac352e765b1b7cc12ea5255ccc4 # v1.156.0
         with:
           ruby-version: 3.2.2
-          bundler: none
-      - name: Install Dependencies
-        run: rake setup
+          bundler-cache: true
       - name: Run Lint
-        run: rake rubocop
-      - name: Generate docs
-        run: rake docs
-      - name: Install & Check Dependencies
-        run: bin/rake dev:frozen_deps
-      - name: Misc checks
-        run: bin/rake check_rvm_integration man:check check_rubygems_integration
+        run: bundle exec rake rubocop
+      - name: Check manifest
+        run: bundle exec rake check_manifest
     timeout-minutes: 15

@@ -9,7 +9,7 @@ end
 
 require "test/unit"
 
-ENV["JARS_SKIP"] = "true" if Gem.java_platform? # avoid unnecessary and noisy `jar-dependencies` post install hook
+ENV["JARS_SKIP"] = "true" if Gem.respond_to?(:java_platform?) && Gem.java_platform? # avoid unnecessary and noisy `jar-dependencies` post install hook
 
 require "fileutils"
 require "pathname"
@@ -23,6 +23,12 @@ require "benchmark" # stdlib
 require_relative "mock_gem_ui"
 
 module Gem
+  unless respond_to?(:java_platform?)
+    def self.java_platform?
+      RUBY_PLATFORM == "java"
+    end
+  end
+
   ##
   # Allows setting the gem path searcher.
 
@@ -287,7 +293,7 @@ class Gem::TestCase < Test::Unit::TestCase
     FileUtils.mkdir_p @tmp
 
     @tempdir = Dir.mktmpdir("test_rubygems_", @tmp)
-    @tempdir.tap(&Gem::UNTAINT)
+    @tempdir.tap(&Gem::UNTAINT) if defined?(Gem::UNTAINT)
 
     ENV["GEM_VENDOR"] = nil
     ENV["GEMRC"] = nil
@@ -337,7 +343,7 @@ class Gem::TestCase < Test::Unit::TestCase
                       File.expand_path(s)
                     end
       if expand_path != s
-        expand_path.tap(&Gem::UNTAINT)
+        expand_path.tap(&Gem::UNTAINT) if defined?(Gem::UNTAINT)
         if s.instance_variable_defined?(:@gem_prelude_index)
           expand_path.instance_variable_set(:@gem_prelude_index, expand_path)
         end
@@ -598,7 +604,8 @@ class Gem::TestCase < Test::Unit::TestCase
         end
       end
 
-      gem = File.join(@tempdir, File.basename(gem)).tap(&Gem::UNTAINT)
+      gem = File.join(@tempdir, File.basename(gem))
+      gem.tap(&Gem::UNTAINT) if defined?(Gem::UNTAINT)
     end
 
     Gem::Installer.at(gem, options.merge({ :wrappers => true })).install
@@ -637,7 +644,8 @@ class Gem::TestCase < Test::Unit::TestCase
   # Reads a Marshal file at +path+
 
   def read_cache(path)
-    File.open path.dup.tap(&Gem::UNTAINT), "rb" do |io|
+    path = path.dup.tap(&Gem::UNTAINT) if defined?(Gem::UNTAINT)
+    File.open path, "rb" do |io|
       Marshal.load io.read
     end
   end
@@ -805,7 +813,13 @@ class Gem::TestCase < Test::Unit::TestCase
 
     lib_dir = File.join(@tempdir, "default_gems", "lib")
     lib_dir.instance_variable_set(:@gem_prelude_index, lib_dir)
-    Gem.instance_variable_set(:@default_gem_load_paths, [*Gem.send(:default_gem_load_paths), lib_dir])
+    default_gem_load_paths = nil
+    if Gem.respond_to?(:default_gem_load_paths)
+      default_gem_load_paths = Gem.send(:default_gem_load_paths)
+    elsif Gem.instance_variable_defined?(:@default_gem_load_paths)
+      default_gem_load_paths = Gem.instance_variable_get(:@default_gem_load_paths)
+    end
+    Gem.instance_variable_set(:@default_gem_load_paths, [*default_gem_load_paths, lib_dir])
     $LOAD_PATH.unshift(lib_dir)
     files.each do |file|
       rb_path = File.join(lib_dir, file)
@@ -1509,7 +1523,7 @@ Also, a list:
     PRIVATE_KEY = nil
     PUBLIC_KEY  = nil
     PUBLIC_CERT = nil
-  end if Gem::HAVE_OPENSSL
+  end if defined? OpenSSL::SSL
 
   private
 
