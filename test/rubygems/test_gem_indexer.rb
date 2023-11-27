@@ -29,7 +29,7 @@ class TestGemIndexer < Gem::TestCase
     FileUtils.mkdir_p gems
     FileUtils.mv Dir[File.join(@gemhome, "cache", "*.gem")], gems
 
-    @indexer = Gem::Indexer.new(@indexerdir)
+    @indexer = Gem::Indexer.new(@indexerdir, build_compact: true)
   end
 
   def teardown
@@ -68,6 +68,7 @@ class TestGemIndexer < Gem::TestCase
       @indexer.build_indices
     end
 
+    gems = File.join @indexerdir, "gems"
     specs_path = File.join @indexer.directory, "specs.#{@marshal_version}"
     specs_dump = Gem.read_binary specs_path
     specs = Marshal.load specs_dump
@@ -99,6 +100,53 @@ class TestGemIndexer < Gem::TestCase
                 ["x",      Gem::Version.new("1"),   "ruby"]]
 
     assert_equal expected, latest_specs, "latest_specs"
+
+    compact_index_names_path = File.join(@indexer.directory, "names")
+    assert_equal <<~NAMES_FILE, File.read(compact_index_names_path)
+      ---
+      a
+      a_evil
+      b
+      c
+      d
+      dep_x
+      pl
+      x
+    NAMES_FILE
+
+    compact_index_versions_path = File.join(@indexer.directory, "versions")
+    versions_file = CompactIndex::VersionsFile.new compact_index_versions_path
+    expected_versions_file = <<~VERSIONS_FILE
+      created_at: #{versions_file.updated_at}
+      ---
+      a 1,2,3.a #{file_md5(File.join(@indexer.directory, "info", "a"))}
+      a_evil 9 #{file_md5(File.join(@indexer.directory, "info", "a_evil"))}
+      b 2 #{file_md5(File.join(@indexer.directory, "info", "b"))}
+      c 1.2 #{file_md5(File.join(@indexer.directory, "info", "c"))}
+      d 2.0,2.0.a,2.0.b #{file_md5(File.join(@indexer.directory, "info", "d"))}
+      dep_x 1 #{file_md5(File.join(@indexer.directory, "info", "dep_x"))}
+      pl 1-x86-linux #{file_md5(File.join(@indexer.directory, "info", "pl"))}
+      x 1 #{file_md5(File.join(@indexer.directory, "info", "x"))}
+    VERSIONS_FILE
+    assert_equal expected_versions_file, File.read(compact_index_versions_path)
+    assert_versions_file_info_checksums @indexer.directory
+
+    assert_equal <<~INFO_FILE, File.read(File.join(@indexer.directory, "info", "a"))
+      ---
+      1 |checksum:#{file_sha256(File.join(gems, "a-1.gem"))}
+      2 |checksum:#{file_sha256(File.join(gems, "a-2.gem"))}
+      3.a |checksum:#{file_sha256(File.join(gems, "a-3.a.gem"))},rubygems:> 1.3.1
+    INFO_FILE
+
+    assert_equal <<~INFO_FILE, File.read(File.join(@indexer.directory, "info", "dep_x"))
+      ---
+      1 x:>= 1|checksum:#{file_sha256(File.join(gems, "dep_x-1.gem"))}
+    INFO_FILE
+
+    assert_equal <<~INFO_FILE, File.read(File.join(@indexer.directory, "info", "pl"))
+      ---
+      1-x86-linux |checksum:#{file_sha256(File.join(gems, "pl-1-x86-linux.gem"))}
+    INFO_FILE
   end
 
   def test_generate_index
@@ -321,9 +369,16 @@ class TestGemIndexer < Gem::TestCase
 
     quickdir = File.join @indexerdir, "quick"
     marshal_quickdir = File.join quickdir, "Marshal.#{@marshal_version}"
+    infodir = File.join @indexerdir, "info"
 
     assert_directory_exists quickdir
     assert_directory_exists marshal_quickdir
+
+    compact_index_versions_path = File.join(@indexerdir, "versions")
+    versions_file_created_at = CompactIndex::VersionsFile.new(compact_index_versions_path).updated_at
+
+    versions_file = File.read File.join @indexerdir, "versions"
+    info_d_file = File.read File.join @indexerdir, "info", "d"
 
     @d2_1 = util_spec "d", "2.1"
     util_build_gem @d2_1
@@ -333,10 +388,15 @@ class TestGemIndexer < Gem::TestCase
     util_build_gem @d2_1_a
     @d2_1_a_tuple = [@d2_1_a.name, @d2_1_a.version, @d2_1_a.original_platform]
 
+    @e1 = util_spec "e", "1"
+    util_build_gem @e1
+    @e1_tuple = [@e1.name, @e1.version, @e1.original_platform]
+
     gems = File.join @indexerdir, "gems"
 
     FileUtils.mv @d2_1.cache_file, gems
     FileUtils.mv @d2_1_a.cache_file, gems
+    FileUtils.mv @e1.cache_file, gems
 
     with_system_gems do
       use_ui @ui do
@@ -365,6 +425,38 @@ class TestGemIndexer < Gem::TestCase
       refute_includes pre_specs_index, @d2_1_tuple
 
       refute_directory_exists @indexer.directory
+
+      assert_indexed infodir, "e"
+
+      assert_equal <<~NAMES_FILE, File.read(File.join(@indexerdir, "names"))
+        ---
+        a_evil
+        b
+        c
+        d
+        dep_x
+        e
+        pl
+        x
+      NAMES_FILE
+
+      assert_equal <<~INFO_FILE, File.read(File.join(infodir, "e"))
+        ---
+        1 |checksum:#{file_sha256(File.join(gems, "e-1.gem"))}
+      INFO_FILE
+
+      assert_equal <<~INFO_FILE, File.read(File.join(infodir, "d"))
+        #{info_d_file.chomp}
+        2.1 |checksum:#{file_sha256(File.join(gems, "d-2.1.gem"))}
+      INFO_FILE
+
+      assert_equal <<~VERSIONS_FILE, File.read(File.join(@indexerdir, "versions"))
+        #{versions_file.chomp}
+        d 2.1 #{file_md5(File.join(@indexerdir, "info", "d"))}
+        e 1 #{file_md5(File.join(@indexerdir, "info", "e"))}
+      VERSIONS_FILE
+
+      assert_versions_file_info_checksums(@indexerdir)
     end
   end
 
@@ -376,5 +468,26 @@ class TestGemIndexer < Gem::TestCase
   def refute_indexed(dir, name)
     file = File.join dir, name
     refute File.exist?(file), "#{file} exists"
+  end
+
+  def assert_versions_file_info_checksums(dir)
+    info_dir = File.join(dir, "info")
+    assert_indexed dir, "versions"
+    File.read(File.join(dir, "versions")).lines[2..].each_with_object({}) do |line, checksums|
+      name, sum = line.split(" ").values_at(0, 2)
+      checksums[name] = sum
+    end.each do |name, checksum|
+      assert_indexed info_dir, name
+      actual = file_md5(File.join(dir, "info", name))
+      assert_equal checksum, actual, "Expected versions file checksum for #{name} (#{checksum}) to match info checksum on disk"
+    end
+  end
+
+  def file_md5(file)
+    Digest::MD5.hexdigest(Gem.read_binary(file))
+  end
+
+  def file_sha256(file)
+    Digest::SHA256.base64digest(Gem.read_binary(file))
   end
 end
