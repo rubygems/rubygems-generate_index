@@ -26,7 +26,7 @@ Gem::Specification.new do |s|
     "CODE_OF_CONDUCT.md"
   ]
 
-  s.required_ruby_version = Gem::Requirement.new(">= 2.6.0")
+  s.required_ruby_version = Gem::Requirement.new(">= 3.0.0")
   s.required_rubygems_version = Gem::Requirement.new(">= 0")
 
   s.add_dependency "compact_index", "~> 0.14.0"
