@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = "rubygems-generate_index"
-  s.version = "1.1.0"
+  s.version = "1.1.1"
   s.authors = ["Jim Weirich", "Chad Fowler", "Eric Hodel", "Luis Lavena", "Aaron Patterson", "Samuel Giddins", "André Arko", "Evan Phoenix", "Hiroshi SHIBATA"]
   s.email = ["", "", "drbrain@segment7.net", "luislavena@gmail.com", "aaron@tenderlovemaking.com", "segiddins@segiddins.me", "andre@arko.net", "evan@phx.io", "hsbt@ruby-lang.org"]
 
@@ -29,5 +29,5 @@ Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 3.0.0")
   s.required_rubygems_version = Gem::Requirement.new(">= 0")
 
-  s.add_dependency "compact_index", "~> 0.14.0"
+  s.add_dependency "compact_index", "~> 0.15.0"
 end
