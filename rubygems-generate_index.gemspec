@@ -29,5 +29,5 @@ Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 3.0.0")
   s.required_rubygems_version = Gem::Requirement.new(">= 0")
 
-  s.add_dependency "compact_index", "~> 0.14.0"
+  s.add_dependency "compact_index", "~> 0.15.0"
 end

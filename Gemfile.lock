@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     rubygems-generate_index (1.1.0)
-      compact_index (~> 0.14.0)
+      compact_index (~> 0.15.0)
 
 GEM
   remote: https://rubygems.org/
@@ -10,7 +10,7 @@ GEM
     ast (2.4.2)
     base64 (0.1.1)
     builder (3.2.4)
-    compact_index (0.14.0)
+    compact_index (0.15.0)
     json (2.6.3)
     json (2.6.3-java)
     language_server-protocol (3.17.0.3)
