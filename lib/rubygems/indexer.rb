@@ -571,7 +571,7 @@ class Gem::Indexer
       checksum = spec.loaded_from && Digest::SHA256.file(spec.loaded_from).base64digest!
       versions_by_name[spec.name] << CompactIndex::GemVersion.new(
         spec.version.version,
-        spec.platform,
+        spec.platform.to_s,
         checksum,
         nil, # info_checksum
         spec.dependencies.map {|d| CompactIndex::Dependency.new(d.name, d.requirement.to_s) },

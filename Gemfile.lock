@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rubygems-generate_index (1.1.1)
+    rubygems-generate_index (1.1.2)
       compact_index (~> 0.15.0)
 
 GEM

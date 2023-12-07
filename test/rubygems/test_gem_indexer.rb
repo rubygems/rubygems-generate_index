@@ -20,6 +20,11 @@ class TestGemIndexer < Gem::TestCase
     @d2_0_b = util_spec "d", "2.0.b"
     util_build_gem @d2_0_b
 
+    @d2_0_a_platform = util_spec "d", "2.0.a" do |s|
+      s.platform = Gem::Platform.new "x86-linux"
+    end
+    util_build_gem @d2_0_a_platform
+
     @default = new_default_spec "default", 2
     install_default_gems @default
 
@@ -123,7 +128,7 @@ class TestGemIndexer < Gem::TestCase
       a_evil 9 #{file_md5(File.join(@indexer.directory, "info", "a_evil"))}
       b 2 #{file_md5(File.join(@indexer.directory, "info", "b"))}
       c 1.2 #{file_md5(File.join(@indexer.directory, "info", "c"))}
-      d 2.0,2.0.a,2.0.b #{file_md5(File.join(@indexer.directory, "info", "d"))}
+      d 2.0,2.0.a,2.0.a-x86-linux,2.0.b #{file_md5(File.join(@indexer.directory, "info", "d"))}
       dep_x 1 #{file_md5(File.join(@indexer.directory, "info", "dep_x"))}
       pl 1-x86-linux #{file_md5(File.join(@indexer.directory, "info", "pl"))}
       x 1 #{file_md5(File.join(@indexer.directory, "info", "x"))}
@@ -254,8 +259,8 @@ class TestGemIndexer < Gem::TestCase
       @indexer.generate_index
     end
 
-    assert_match(/^\.\.\.\.\.\.\.\.\.\.\.\.$/, @ui.output)
-    assert_match(/^Generating Marshal quick index gemspecs for 12 gems$/, @ui.output)
+    assert_match(/^[.]{13}$/, @ui.output)
+    assert_match(/^Generating Marshal quick index gemspecs for 13 gems$/, @ui.output)
     assert_match(/^Complete$/, @ui.output)
     assert_match(/^Generating specs index$/, @ui.output)
     assert_match(/^Generating latest specs index$/, @ui.output)
@@ -345,6 +350,7 @@ class TestGemIndexer < Gem::TestCase
 
     assert_equal [["a", Gem::Version.new("3.a"),   "ruby"],
                   ["d", Gem::Version.new("2.0.a"), "ruby"],
+                  ["d", Gem::Version.new("2.0.a"), "x86-linux"],
                   ["d", Gem::Version.new("2.0.b"), "ruby"]],
                  prerelease_specs
   end
