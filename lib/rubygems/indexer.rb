@@ -574,7 +574,7 @@ class Gem::Indexer
         spec.platform.to_s,
         checksum,
         nil, # info_checksum
-        spec.dependencies.map {|d| CompactIndex::Dependency.new(d.name, d.requirement.to_s) },
+        spec.dependencies.select(&:runtime?).map {|d| CompactIndex::Dependency.new(d.name, d.requirement.to_s) },
         spec.required_ruby_version&.to_s,
         spec.required_rubygems_version&.to_s
       )
