@@ -216,7 +216,7 @@ class Gem::Indexer
 
     Gem.time "Generated compact index files" do
       info_dir = File.join(@directory, "info")
-      FileUtils.mkdir_p info_dir, :mode => 0o700
+      FileUtils.mkdir_p info_dir
 
       gems.each do |gem|
         info = CompactIndex.info(gem.versions)

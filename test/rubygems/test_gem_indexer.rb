@@ -368,6 +368,10 @@ class TestGemIndexer < Gem::TestCase
     util_remove_gem sys_gem
   end
 
+  def file_permissions_for(path)
+    format("%o", File.stat(path).mode)
+  end
+
   def test_update_index
     use_ui @ui do
       @indexer.generate_index
@@ -377,8 +381,12 @@ class TestGemIndexer < Gem::TestCase
     marshal_quickdir = File.join quickdir, "Marshal.#{@marshal_version}"
     infodir = File.join @indexerdir, "info"
 
+    assert_directory_exists(infodir)
+    assert_equal file_permissions_for(infodir), "40755"
     assert_directory_exists quickdir
+    assert_equal file_permissions_for(quickdir), "40755"
     assert_directory_exists marshal_quickdir
+    assert_equal file_permissions_for(marshal_quickdir), "40755"
 
     compact_index_versions_path = File.join(@indexerdir, "versions")
     versions_file_created_at = CompactIndex::VersionsFile.new(compact_index_versions_path).updated_at
