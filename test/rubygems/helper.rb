@@ -948,6 +948,9 @@ Also, a list:
   * An entry that\'s actually kind of sort
   * an entry that\'s really long, which will probably get wrapped funny.  That's ok, somebody wasn't thinking straight when they made it more than eighty characters.
       DESC
+
+      s.add_runtime_dependency "b"
+      s.add_development_dependency "x"
     end
 
     init = proc do |s|
