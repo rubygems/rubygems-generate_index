@@ -6,13 +6,11 @@ source "https://rubygems.org"
 gemspec
 
 gem "rake", "~> 13.0"
+gem "rubocop", "~> 1.21"
+gem "rubocop-performance", "~> 1.19"
+gem "rubocop-rake", "~> 0.6.0"
 gem "test-unit", "~> 3.0"
-install_if -> { RUBY_VERSION >= "2.7" } do
-  gem "rubocop", "~> 1.21"
-  gem "rubocop-performance", "~> 1.19"
-end
+
 install_if -> { Gem::VERSION < "3.2.0" } do
   gem "builder", "~> 3.2"
 end
-
-gem "rubocop-rake", "~> 0.6.0"
