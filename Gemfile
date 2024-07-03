@@ -14,3 +14,5 @@ end
 install_if -> { Gem::VERSION < "3.2.0" } do
   gem "builder", "~> 3.2"
 end
+
+gem "rubocop-rake", "~> 0.6.0"
