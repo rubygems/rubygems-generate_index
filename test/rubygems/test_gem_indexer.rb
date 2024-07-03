@@ -140,7 +140,7 @@ class TestGemIndexer < Gem::TestCase
       ---
       1 b:>= 0|checksum:#{file_sha256(File.join(gems, "a-1.gem"))}
       2 |checksum:#{file_sha256(File.join(gems, "a-2.gem"))}
-      3.a |checksum:#{file_sha256(File.join(gems, "a-3.a.gem"))},rubygems:> 1.3.1
+      3.a |checksum:#{file_sha256(File.join(gems, "a-3.a.gem"))}#{",rubygems:> 1.3.1" if Gem::VERSION < "3.5.0"}
     INFO_FILE
 
     assert_equal <<~INFO_FILE, File.read(File.join(@indexer.directory, "info", "dep_x"))
