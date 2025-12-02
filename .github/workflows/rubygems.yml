@@ -31,13 +31,14 @@ jobs:
           - { name: "3.1", value: 3.1.7 }
           - { name: "3.2", value: 3.2.4 }
           - { name: "3.3", value: 3.3.3 }
+          - { name: "3.4", value: 3.4.7 }
 
         include:
           - ruby: { name: jruby-9.4, value: jruby-9.4.8.0 }
             os: { name: Ubuntu, value: ubuntu-22.04 }
 
-          - ruby: { name: truffleruby, value: truffleruby-24.0.1 }
-            os: { name: Ubuntu, value: ubuntu-22.04 }
+          # - ruby: { name: truffleruby, value: truffleruby-24.0.1 }
+          #   os: { name: Ubuntu, value: ubuntu-22.04 }
 
           - os: { name: Windows, value: windows-2022 }
             ruby: { name: mswin, value: mswin }
@@ -49,9 +50,9 @@ jobs:
             ruby: { name: truffleruby-head, value: truffleruby-head }
 
     steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.1
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Setup ruby
-        uses: ruby/setup-ruby@efbf473cab83af4468e8606cc33eca9281bb213f # v1.256.0
+        uses: ruby/setup-ruby@8aeb6ff8030dd539317f8e1769a044873b56ea71 # v1.268.0
         with:
           ruby-version: ${{ matrix.ruby.value }}
           bundler-cache: true
