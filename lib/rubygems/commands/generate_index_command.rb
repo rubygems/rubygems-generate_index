@@ -22,13 +22,9 @@ class Gem::Commands::GenerateIndexCommand < Gem::Command
     end
 
     add_option "--[no-]modern",
-               "Generate indexes for RubyGems",
-               "(always true)" do |value, options|
+               "Generate indexes for RubyGems" do |value, options|
       options[:build_modern] = value
     end
-
-    deprecate_option("--modern", version: "4.0", extra_msg: "Modern indexes (specs, latest_specs, and prerelease_specs) are always generated, so this option is not needed.")
-    deprecate_option("--no-modern", version: "4.0", extra_msg: "The `--no-modern` option is currently ignored. Modern indexes (specs, latest_specs, and prerelease_specs) are always generated.")
 
     add_option "--[no-]compact",
                 "Generate compact index files" do |value, options|
@@ -73,8 +69,10 @@ Marshal::MINOR_VERSION constants.  It is used to ensure compatibility.
   end
 
   def execute
-    # This is always true because it's the only way now.
-    options[:build_modern] = true
+    if !options[:build_modern] && !options[:build_compact]
+      alert_error "At least one of --modern or --compact must be enabled."
+      terminate_interaction 1
+    end
 
     if !File.exist?(options[:directory]) ||
        !File.directory?(options[:directory])
