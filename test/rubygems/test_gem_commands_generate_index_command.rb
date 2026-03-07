@@ -60,22 +60,45 @@ class TestGemCommandsGenerateIndexCommand < Gem::TestCase
   end
 
   def test_handle_options_modern
-    use_ui @ui do
-      @cmd.handle_options %w[--modern]
-    end
+    @cmd.handle_options %w[--modern]
 
-    assert_equal \
-      "WARNING:  The \"--modern\" option has been deprecated and will be removed in Rubygems 4.0. Modern indexes (specs, latest_specs, and prerelease_specs) are always generated, so this option is not needed.\n",
-      @ui.error
+    assert @cmd.options[:build_modern]
   end
 
   def test_handle_options_no_modern
+    @cmd.handle_options %w[--no-modern]
+
+    refute @cmd.options[:build_modern]
+  end
+
+  def test_execute_compact_only
+    @cmd.options[:build_modern] = false
+    @cmd.options[:build_compact] = true
+
     use_ui @ui do
-      @cmd.handle_options %w[--no-modern]
+      @cmd.execute
     end
 
-    assert_equal \
-      "WARNING:  The \"--no-modern\" option has been deprecated and will be removed in Rubygems 4.0. The `--no-modern` option is currently ignored. Modern indexes (specs, latest_specs, and prerelease_specs) are always generated.\n",
-      @ui.error
+    names = File.join @gemhome, "names"
+    assert File.exist?(names), names
+
+    versions = File.join @gemhome, "versions"
+    assert File.exist?(versions), versions
+
+    specs = File.join @gemhome, "specs.4.8.gz"
+    refute File.exist?(specs), specs
+  end
+
+  def test_execute_no_modern_no_compact
+    @cmd.options[:build_modern] = false
+    @cmd.options[:build_compact] = false
+
+    assert_raise Gem::MockGemUi::TermError do
+      use_ui @ui do
+        @cmd.execute
+      end
+    end
+
+    assert_match(/At least one of --modern or --compact must be enabled/, @ui.error)
   end
 end

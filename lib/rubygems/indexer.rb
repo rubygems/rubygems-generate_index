@@ -108,8 +108,12 @@ class Gem::Indexer
   def build_indices
     specs = map_gems_to_specs gem_file_list
     Gem::Specification._resort! specs
-    build_marshal_gemspecs specs
-    build_modern_indices specs if @build_modern
+
+    if @build_modern
+      build_marshal_gemspecs specs
+      build_modern_indices specs
+    end
+
     build_compact_index specs if @build_compact
 
     compress_indices
@@ -288,10 +292,10 @@ class Gem::Indexer
   # All future files should be compressed using gzip, not deflate
 
   def compress_indices
-    say "Compressing indices"
+    if @build_modern
+      say "Compressing indices"
 
-    Gem.time "Compressed indices" do
-      if @build_modern
+      Gem.time "Compressed indices" do
         gzip @specs_index
         gzip @latest_specs_index
         gzip @prerelease_specs_index
@@ -400,7 +404,7 @@ class Gem::Indexer
   def make_temp_directories
     FileUtils.rm_rf @directory
     FileUtils.mkdir_p @directory, :mode => 0o700
-    FileUtils.mkdir_p @quick_marshal_dir
+    FileUtils.mkdir_p @quick_marshal_dir if @build_modern
   end
 
   ##
@@ -421,7 +425,13 @@ class Gem::Indexer
   def update_index
     make_temp_directories
 
-    specs_mtime = File.stat(@dest_specs_index).mtime
+    if @build_modern
+      reference_file = @dest_specs_index
+    elsif @build_compact
+      reference_file = File.join(@dest_directory, "versions")
+    end
+
+    specs_mtime = File.stat(reference_file).mtime
     newest_mtime = Time.at 0
 
     updated_gems = gem_file_list.select do |gem|
@@ -438,14 +448,18 @@ class Gem::Indexer
     specs = map_gems_to_specs updated_gems
     prerelease, released = specs.partition {|s| s.version.prerelease? }
 
-    files = build_marshal_gemspecs specs
+    files = []
 
-    Gem.time "Updated indexes" do
-      update_specs_index released, @dest_specs_index, @specs_index
-      update_specs_index released, @dest_latest_specs_index, @latest_specs_index
-      update_specs_index(prerelease,
-                         @dest_prerelease_specs_index,
-                         @prerelease_specs_index)
+    if @build_modern
+      files = build_marshal_gemspecs specs
+
+      Gem.time "Updated indexes" do
+        update_specs_index released, @dest_specs_index, @specs_index
+        update_specs_index released, @dest_latest_specs_index, @latest_specs_index
+        update_specs_index(prerelease,
+                           @dest_prerelease_specs_index,
+                           @prerelease_specs_index)
+      end
     end
 
     if @build_compact
@@ -460,12 +474,14 @@ class Gem::Indexer
 
     say "Updating production dir #{@dest_directory}" if verbose
 
-    files << @specs_index
-    files << "#{@specs_index}.gz"
-    files << @latest_specs_index
-    files << "#{@latest_specs_index}.gz"
-    files << @prerelease_specs_index
-    files << "#{@prerelease_specs_index}.gz"
+    if @build_modern
+      files << @specs_index
+      files << "#{@specs_index}.gz"
+      files << @latest_specs_index
+      files << "#{@latest_specs_index}.gz"
+      files << @prerelease_specs_index
+      files << "#{@prerelease_specs_index}.gz"
+    end
 
     files = files.map do |path|
       path.sub(%r{^#{Regexp.escape @directory}/?}, "") # HACK?
