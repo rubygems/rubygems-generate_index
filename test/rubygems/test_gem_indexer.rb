@@ -459,10 +459,11 @@ class TestGemIndexer < Gem::TestCase
         1 |checksum:#{file_sha256(File.join(gems, "e-1.gem"))}
       INFO_FILE
 
-      d_info = File.read(File.join(infodir, "d"))
-      assert d_info.start_with?(info_d_file), "info/d should preserve original content"
-      assert_match(/^2\.1 \|checksum:#{Regexp.escape(file_sha256(File.join(gems, "d-2.1.gem")))}$/, d_info)
-      assert_match(/^2\.2\.a \|checksum:#{Regexp.escape(file_sha256(File.join(gems, "d-2.2.a.gem")))}/, d_info)
+      assert_equal <<~INFO_FILE, File.read(File.join(infodir, "d"))
+        #{info_d_file.chomp}
+        2.1 |checksum:#{file_sha256(File.join(gems, "d-2.1.gem"))}
+        2.2.a |checksum:#{file_sha256(File.join(gems, "d-2.2.a.gem"))}
+      INFO_FILE
 
       assert_equal <<~VERSIONS_FILE, File.read(File.join(@indexerdir, "versions"))
         #{versions_file.chomp}
