@@ -504,4 +504,127 @@ class TestGemIndexer < Gem::TestCase
   def file_sha256(file)
     Digest::SHA256.base64digest(Gem.read_binary(file))
   end
+
+  def test_build_indices_compact_only
+    with_indexer(@indexerdir, build_compact: true, build_modern: false) do |indexer|
+      indexer.make_temp_directories
+
+      use_ui @ui do
+        indexer.build_indices
+      end
+
+      assert File.exist?(File.join(indexer.directory, "names")), "names file should exist"
+      assert File.exist?(File.join(indexer.directory, "versions")), "versions file should exist"
+      assert_directory_exists File.join(indexer.directory, "info")
+
+      refute File.exist?(File.join(indexer.directory, "specs.#{@marshal_version}")),
+             "specs index should not exist"
+      refute File.exist?(File.join(indexer.directory, "latest_specs.#{@marshal_version}")),
+             "latest_specs index should not exist"
+      refute File.exist?(File.join(indexer.directory, "prerelease_specs.#{@marshal_version}")),
+             "prerelease_specs index should not exist"
+      refute File.directory?(File.join(indexer.directory, "quick")),
+             "quick dir should not exist"
+    end
+  end
+
+  def test_generate_index_compact_only
+    with_indexer(@indexerdir, build_compact: true, build_modern: false) do |indexer|
+      use_ui @ui do
+        indexer.generate_index
+      end
+
+      assert_indexed @indexerdir, "names"
+      assert_indexed @indexerdir, "versions"
+      assert_directory_exists File.join(@indexerdir, "info")
+
+      refute_indexed @indexerdir, "specs.#{@marshal_version}"
+      refute_indexed @indexerdir, "specs.#{@marshal_version}.gz"
+      refute_indexed @indexerdir, "latest_specs.#{@marshal_version}"
+      refute_indexed @indexerdir, "latest_specs.#{@marshal_version}.gz"
+      refute_indexed @indexerdir, "prerelease_specs.#{@marshal_version}"
+      refute_indexed @indexerdir, "prerelease_specs.#{@marshal_version}.gz"
+
+      quickdir = File.join @indexerdir, "quick"
+      refute File.directory?(quickdir), "quick directory should not exist"
+
+      refute_directory_exists indexer.directory
+    end
+  end
+
+  def test_generate_index_compact_only_ui
+    with_indexer(@indexerdir, build_compact: true, build_modern: false) do |indexer|
+      use_ui @ui do
+        indexer.generate_index
+      end
+
+      refute_match(/Generating Marshal quick index/, @ui.output)
+      refute_match(/Generating specs index/, @ui.output)
+      refute_match(/Generating latest specs index/, @ui.output)
+      refute_match(/Generating prerelease specs index/, @ui.output)
+      refute_match(/Compressing indices/, @ui.output)
+
+      assert_match(/Generating compact index/, @ui.output)
+    end
+  end
+
+  def test_update_index_compact_only
+    with_indexer(@indexerdir, build_compact: true, build_modern: false) do |indexer|
+      use_ui @ui do
+        indexer.generate_index
+      end
+    end
+
+    assert_indexed @indexerdir, "names"
+    assert_indexed @indexerdir, "versions"
+    infodir = File.join @indexerdir, "info"
+    assert_directory_exists infodir
+
+    versions_file = File.read File.join @indexerdir, "versions"
+    info_d_file = File.read File.join @indexerdir, "info", "d"
+
+    @d2_1 = util_spec "d", "2.1"
+    util_build_gem @d2_1
+
+    @e1 = util_spec "e", "1"
+    util_build_gem @e1
+
+    gems = File.join @indexerdir, "gems"
+    FileUtils.mv @d2_1.cache_file, gems
+    FileUtils.mv @e1.cache_file, gems
+
+    with_indexer(@indexerdir, build_compact: true, build_modern: false) do |indexer|
+      with_system_gems do
+        use_ui @ui do
+          indexer.update_index
+        end
+
+        assert_indexed infodir, "e"
+        assert_indexed infodir, "d"
+
+        assert_equal <<~INFO_FILE, File.read(File.join(infodir, "e"))
+          ---
+          1 |checksum:#{file_sha256(File.join(gems, "e-1.gem"))}
+        INFO_FILE
+
+        assert_equal <<~INFO_FILE, File.read(File.join(infodir, "d"))
+          #{info_d_file.chomp}
+          2.1 |checksum:#{file_sha256(File.join(gems, "d-2.1.gem"))}
+        INFO_FILE
+
+        assert_equal <<~VERSIONS_FILE, File.read(File.join(@indexerdir, "versions"))
+          #{versions_file.chomp}
+          d 2.1 #{file_md5(File.join(@indexerdir, "info", "d"))}
+          e 1 #{file_md5(File.join(@indexerdir, "info", "e"))}
+        VERSIONS_FILE
+
+        assert_versions_file_info_checksums(@indexerdir)
+
+        refute_indexed @indexerdir, "specs.#{@marshal_version}"
+        refute_indexed @indexerdir, "specs.#{@marshal_version}.gz"
+        refute File.directory?(File.join(@indexerdir, "quick")),
+               "quick directory should not exist"
+      end
+    end
+  end
 end
