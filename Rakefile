@@ -56,3 +56,29 @@ task :check_manifest do
     abort "Manifest is out of date. Run `rake update_manifest` to sync it"
   end
 end
+
+namespace :vendor do
+  desc "Sync vendored compact_index from rubygems/rubygems.org (REF=master)"
+  task :compact_index do
+    require "open-uri"
+    require "fileutils"
+
+    ref = ENV["REF"] || "master"
+    repo = "rubygems/rubygems.org"
+    paths = %w[
+      lib/compact_index.rb
+      lib/compact_index/dependency.rb
+      lib/compact_index/gem.rb
+      lib/compact_index/gem_version.rb
+      lib/compact_index/versions_file.rb
+    ]
+
+    paths.each do |path|
+      url = "https://raw.githubusercontent.com/#{repo}/#{ref}/#{path}"
+      puts "Fetching #{url}"
+      content = URI.parse(url).open(&:read)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, content)
+    end
+  end
+end
