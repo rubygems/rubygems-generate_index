@@ -450,7 +450,7 @@ class Gem::Indexer
 
     if @build_compact
       Gem.time "Updated compact index files" do
-        files += update_compact_index released, @dest_directory, @directory
+        files += update_compact_index specs, @dest_directory, @directory
       end
     end
 
