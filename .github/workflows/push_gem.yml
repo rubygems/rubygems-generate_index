@@ -1,39 +1,46 @@
----
-"on":
+name: Publish gem to rubygems.org
+
+on:
   push:
     tags:
-      - v*
-name: Push Gem
+      - 'v*'
+
+permissions:
+  contents: read
+
 jobs:
   push:
+    if: github.repository == 'ruby/rubygems-generate_index'
     runs-on: ubuntu-latest
+
+    environment:
+      name: rubygems.org
+      url: https://rubygems.org/gems/rubygems-generate_index
+
     permissions:
       contents: write
       id-token: write
+
     steps:
-      - uses: rubygems/configure-rubygems-credentials@main
+      - name: Harden Runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
         with:
-          role-to-assume: rg_oidc_akr_e3gvf8d8qwrffk7gjno7
-      - uses: actions/checkout@v5
-      - name: Set remote URL
-        run: |
-          # Attribute commits to the last committer on HEAD
-          git config --global user.email "$(git log -1 --pretty=format:'%ae')"
-          git config --global user.name "$(git log -1 --pretty=format:'%an')"
-          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+          egress-policy: audit
+
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@d5126b9b3579e429dd52e51e68624dda2e05be25 # v1.267.0
         with:
           bundler-cache: true
           ruby-version: ruby
-      - name: Release
-        run: bundle exec rake release
-      - name: Wait for release to propagate
+
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@6317d8d1f7e28c24d28f6eff169ea854948bd9f7 # v1.2.0
+
+      - name: Create GitHub release
         run: |
-          gem install rubygems-await
-          gem_tuple="$(ruby -rbundler/setup -rbundler -e '
-              spec = Bundler.definition.specs.find {|s| s.name == ARGV[0] }
-              raise "No spec for #{ARGV[0]}" unless spec
-              print [spec.name, spec.version, spec.platform].join(":")
-            ' "rubygems-generate_index")"
-          gem await "${gem_tuple}"
+          tag_name="$(git describe --tags --abbrev=0)"
+          gh release create "${tag_name}" --verify-tag --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
