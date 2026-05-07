@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "compact_index"
+require_relative "../compact_index"
 require "rubygems"
 require "rubygems/package"
 require "tmpdir"

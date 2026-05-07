@@ -4,6 +4,11 @@ LICENSE.txt
 MIT.txt
 Manifest.txt
 README.md
+lib/compact_index.rb
+lib/compact_index/dependency.rb
+lib/compact_index/gem.rb
+lib/compact_index/gem_version.rb
+lib/compact_index/versions_file.rb
 lib/rubygems/commands/generate_index_command.rb
 lib/rubygems/indexer.rb
 lib/rubygems_plugin.rb
